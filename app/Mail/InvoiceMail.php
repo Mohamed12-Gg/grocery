@@ -10,14 +10,31 @@ class InvoiceMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public function __construct()
+    public $bodyText;
+    public $pdfBytes;
+
+    /**
+     * Create a new message instance.
+     */
+    public function __construct(string $bodyText = 'Attached invoice', ?string $pdfBytes = null)
     {
+        $this->bodyText = $bodyText;
+        $this->pdfBytes = $pdfBytes;
     }
 
+    /**
+     * Build the message.
+     */
     public function build()
     {
-        return $this
-            ->subject('Invoice')
-            ->view('emails.invoice');
+        $mail = $this->subject('فاتورتك')->view('emails.plain', ['body' => $this->bodyText]);
+
+        if ($this->pdfBytes) {
+            $mail->attachData($this->pdfBytes, 'invoice.pdf', [
+                'mime' => 'application/pdf',
+            ]);
+        }
+
+        return $mail;
     }
 }

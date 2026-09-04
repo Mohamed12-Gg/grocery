@@ -6,10 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
+use App\Models\Concerns\Filterable;
 
 class Category extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, Filterable;
 
     /** Fallback when no image is stored (API always exposes a usable URL). */
     public const DEFAULT_IMAGE_URL = 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=400';

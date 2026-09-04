@@ -7,24 +7,22 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class SendEmailJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    /**
-     * @param  array<string, mixed>  $payload
-     */
-    public function __construct(public array $payload = [])
+    public function __construct(private readonly string $email)
     {
     }
 
-    /**
-     * Execute the job.
-     */
     public function handle(): void
     {
-        Log::info('Sending email to the user', $this->payload);
+        Mail::raw('This is a test email from Grocery API.', function ($message) {
+            $message
+                ->to($this->email)
+                ->subject('Grocery API test email');
+        });
     }
 }

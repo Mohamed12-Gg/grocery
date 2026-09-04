@@ -2,39 +2,52 @@
 
 namespace App\Jobs;
 
+use App\Mail\InvoiceMail;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class SendInvoiceJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $tries = 3;
+    protected $email;
 
-    public function __construct(
-        public string $userEmail,
-        public array $invoiceData
-    ) {}
-
-    public function handle(): void
+    public function __construct($email)
     {
-        try {
-            // تنفيذ عملية إرسال الإيميل
-            Mail::send([], [], function ($message) {
-                $message->to($this->userEmail)
-                        ->subject('Invoice #' . $this->invoiceData['order_id'])
-                        ->html('<p>Hello ' . $this->invoiceData['user_name'] . ', please find your invoice attached.</p>');
-            });
+        $this->email = $email;
+    }
 
-            Log::info("Invoice sent successfully to: {$this->userEmail}");
-        } catch (\Throwable $e) {
-            Log::error("Failed to send invoice to {$this->userEmail}: " . $e->getMessage());
-            throw $e;
-        }
+    public function handle()
+    {
+        $invoice = [
+            'invoice_no' => 100,
+            'customer'   => 'samir elsayed',
+            'amount'     =>2000,
+        ];
+
+        $pdf = Pdf::loadView('pdf.invoice', compact('invoice'));
+
+        Mail::to($this->email)->send(
+            new InvoiceMail(
+                'Attached invoice',
+                $pdf->output()
+            )
+        );
+
+        Log::info('Invoice sent successfully to ' . $this->email);
+    }
+
+    public function failed($exception)
+    {
+        Log::error('Failed sending invoice', [
+            'email' => $this->email,
+            'error' => $exception->getMessage(),
+        ]);
     }
 }

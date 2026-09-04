@@ -7,10 +7,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Database\Eloquent\Builder;
 
+use App\Models\Concerns\Filterable;
 class Meal extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, Filterable;
 
     /**
      * The attributes that are mass assignable.
@@ -128,19 +131,6 @@ class Meal extends Model
     public function scopeHot($query)
     {
         return $query->where('is_hot', true);
-    }
-
-    /**
-     * Scope a query to only include meals with active discounts (today's deals).
-     * Either has discount_price set or has offer_title (percentage discount can be calculated).
-     */
-    public function scopeWithActiveDiscount($query)
-    {
-        return $query->where(function ($q) {
-            $q->whereNotNull('discount_price')
-                ->orWhereNotNull('offer_title')
-                ->where('offer_title', '!=', '');
-        });
     }
 
     /**
@@ -309,4 +299,18 @@ class Meal extends Model
     {
         return $this->hasMany(Review::class);
     }
+
+    //scope filter 
+    public function scopeFilter(Builder $query, Request $request):Builder{
+        $static = self::resolveFilterClass();
+
+        return (new $static($request))->apply($query);
+    }
+
+    //base url to scope filter 
+    public static function resolveFilterClass():string{
+        return "App\\Filters\\".class_basename(Self::class)."Filter";
+    }
+
+    
 }

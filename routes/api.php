@@ -1,5 +1,7 @@
 <?php
 
+use  App\Jobs\SendInvoiceEmailJob;
+use  App\Jobs\SendToInventroyJob;
 use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\Auth\GoogleAuthController;
 use App\Http\Controllers\Api\AuthController;
@@ -7,10 +9,12 @@ use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ChatbotController;
 use App\Http\Controllers\Api\ContactController;
-use App\Http\Controllers\Api\CreateOrderController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\DataManagementController;
+use App\Http\Controllers\Api\FaqController as ApiFaqController;
 use App\Http\Controllers\Api\FaqController;
 use App\Http\Controllers\Api\FavoriteController;
+use App\Http\Controllers\Api\LoyaltyController;
 use App\Http\Controllers\Api\MealController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\NotificationSettingsController;
@@ -18,7 +22,6 @@ use App\Http\Controllers\Api\OfferController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ProfileController;
-use App\Http\Controllers\Api\SetDefaultAddressController;
 use App\Http\Controllers\Api\SettingController;
 use App\Http\Controllers\Api\SmartListController;
 use App\Http\Controllers\Api\SpecialNoteController;
@@ -27,8 +30,19 @@ use App\Http\Controllers\Api\StripeCheckoutController;
 use App\Http\Controllers\Api\StripeController;
 use App\Http\Controllers\Api\StripeWebhookController;
 use App\Http\Controllers\Api\SubcategoryController;
+use App\Jobs\CreateInvoiceJob;
+use App\Jobs\SendEmailJob;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Bus;
+use App\Http\Controllers\Api\SupportController;
+use App\Http\Controllers\Api\UserAppSettingsController;
+use App\Http\Controllers\Api\V1\CategoryController as ApiCategoryController;
+use App\Http\Controllers\Api\V1\InvoiceController;
+use App\Http\Controllers\Api\V1\MealController as ApiMealController;
 use Illuminate\Support\Facades\Route;
+use App\Traits\V1;
 
+use App\Jobs\SendInvoiceJob;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -39,6 +53,61 @@ use Illuminate\Support\Facades\Route;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
+Route::get("/send-email", function (Request $request) {
+    $email = $request->query('email', 'omar-elsayed@example.com');
+
+    Bus::chain([
+        new SendEmailJob($email),
+        new CreateInvoiceJob($email),
+    ])->dispatch();
+
+    return response()->json([
+        "message" => "Email job dispatched successfully",
+        "email" => $email, 
+    ]);
+});
+
+Route::prefix("v1")->group(function(){
+   Route::get("/meals",[MealController::class,"index"]);
+});
+
+
+
+
+
+
+
+
+
+
+Route::get('/send-email', function () {
+    SendInvoiceEmailJob::dispatch();
+
+    return response()->json(['message' => 'Invoice email dispatched']);
+});
+
+    
+Route::get('/send-invoice', function () {
+
+sendInvoiceJob::dispatch(
+
+    'samiralsaied07@gmail.com',
+);
+
+    return response()->json([
+        'message' => 'Job queued successfully'
+    ]);
+});
+
+Route::prefix('v1')->group(function () {
+    Route::get('/meals', [ApiMealController::class, 'index']);
+         Route::get('/categories', [ApiCategoryController::class, 'index']);
+    Route::get('/faqs', [ApiFaqController::class, 'index']);
+
+
+
+
+});
 
 Route::post('/stripe/webhook', [StripeWebhookController::class, 'handle']);
 
@@ -76,10 +145,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('addresses')->group(function () {
         Route::get('/', [AddressController::class, 'index']);
         Route::post('/', [AddressController::class, 'store']);
-        Route::get('/{address}', [AddressController::class, 'show']);
-        Route::put('/{address}', [AddressController::class, 'update']);
-        Route::delete('/{address}', [AddressController::class, 'destroy']);
-        Route::post('/{address}/set-default', SetDefaultAddressController::class);
+        Route::get('/{id}', [AddressController::class, 'show']);
+        Route::put('/{id}', [AddressController::class, 'update']);
+        Route::delete('/{id}', [AddressController::class, 'destroy']);
+        Route::post('/{id}/set-default', [AddressController::class, 'setDefault']);
     });
 
     Route::post('smart-lists/{id}/meals', [SmartListController::class, 'addMeal']);
@@ -166,6 +235,25 @@ Route::middleware('auth:sanctum')->group(function () {
     // Dashboard route
     Route::get('/dashboard', [DashboardController::class, 'index']);
 
+    // Loyalty & rewards
+    Route::get('/loyalty', [LoyaltyController::class, 'index']);
+
+    // Help & support — problem reports (authenticated)
+    Route::post('/support/report', [SupportController::class, 'store']);
+
+    // App settings (profile settings page)
+    Route::get('/language', [UserAppSettingsController::class, 'showLanguage']);
+    Route::put('/language', [UserAppSettingsController::class, 'updateLanguage']);
+    Route::get('/appearance', [UserAppSettingsController::class, 'showAppearance']);
+    Route::put('/appearance', [UserAppSettingsController::class, 'updateAppearance']);
+    Route::get('/notification-preferences', [UserAppSettingsController::class, 'showNotificationPreferences']);
+    Route::put('/notification-preferences', [UserAppSettingsController::class, 'updateNotificationPreferences']);
+
+    Route::prefix('data-management')->group(function () {
+        Route::get('/download', [DataManagementController::class, 'download']);
+        Route::delete('/delete', [DataManagementController::class, 'delete']);
+    });
+
     // Personalized "frequency" meals (requires auth — uses order history)
     Route::get('/frequency', [MealController::class, 'frequency']);
 });
@@ -221,10 +309,3 @@ Route::get('/health', function () {
         'timestamp' => now(),
     ]);
 });
-
-
-// Route::apiResource('smart-list-lists', SmartListListController::class);
-
-// Categories routes by mohammed-bashamekha
-use App\Http\Controllers\CategoryController as ControllersCategoryController;
-Route::apiResource('categories-ver2', ControllersCategoryController::class);

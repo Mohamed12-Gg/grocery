@@ -7,6 +7,9 @@ use App\Models\Order;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Barryvdh\DomPDF\Facade\Pdf;
+
+
 
 class PaymentController extends Controller
 {
@@ -95,11 +98,19 @@ class PaymentController extends Controller
     /**
      * Get invoice for a specific order (alias for receipt).
      */
-    public function invoice(Request $request, Order $order): JsonResponse
-    {
-        return $this->receipt($request, $order);
+    public function Invoice(Request $request, Order $order):JsonResponse{
+        $user = $request->user();
+        if($order->user_id !== $user->id){
+            return response ()->json([
+                'success' => false,
+                "message" => "Order not found",
+            ], 404);
+        }
+        $order->load(["items.meal.category", "items.meal.subcategory", "address", "user"]);
+        $pdf = Pdf::loadView("invoices.show",["order"=>$order]);
+        
+        return $pdf->download("invoice.pdf".$order->id.".pdf");
     }
-
     /**
      * Format order as receipt/invoice.
      */

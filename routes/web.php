@@ -1,8 +1,9 @@
 <?php
 
 use App\Http\Controllers\StripePaymentCallbackController;
+use App\Http\Controllers\WebChatController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\DashboardController;
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -23,19 +24,14 @@ Route::get('/', function () {
     ]);
 });
 
+Route::prefix('chat')->group(function () {
+    Route::get('/', [WebChatController::class, 'index'])->name('chat');
+    Route::post('/send', [WebChatController::class, 'send'])->name('chat.send');
+    Route::post('/reset', [WebChatController::class, 'reset'])->name('chat.reset');
+});
+
 Route::prefix('payment')->group(function () {
     Route::get('/success', [StripePaymentCallbackController::class, 'success'])->name('payment.success');
     Route::get('/cancel', [StripePaymentCallbackController::class, 'cancel'])->name('payment.cancel');
-});
-
-
-
-Route::middleware('auth:sanctum')->prefix('dashboard')->group(function () {
-    Route::get('/admin/dashboard', function () {
-        return view('admin.dashboard');
-    })->name('admin.dashboard');
-    Route::get('/', [DashboardController::class, 'index']);
-    Route::post('/meals', [DashboardController::class, 'storeMeal']);
-    Route::put('/meals/{meal}', [DashboardController::class, 'updateMeal']);
-    Route::delete('/meals/{meal}', [DashboardController::class, 'destroyMeal']);
+    
 });

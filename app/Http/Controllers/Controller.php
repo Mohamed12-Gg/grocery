@@ -9,4 +9,6 @@ use Barryvdh\DomPDF\Facade\Pdf;
 class Controller extends BaseController
 {
     use AuthorizesRequests, ValidatesRequests;
+
+    const PAGINATION_SIZE = 30;
 }

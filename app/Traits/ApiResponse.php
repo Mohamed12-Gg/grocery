@@ -1,26 +1,30 @@
 <?php
-namespace App\Traits\V1;
-use Illuminate\Http\Request;
+
+namespace App\Traits;
+
 use Illuminate\Http\JsonResponse;
+
 trait ApiResponse
 {
-    public static function successResponse($message = null, $result = null, $code = 200):JsonResponse
+    public static function success($message = null, $result = null, $code = 200): JsonResponse
     {
         $response = [
             'status' => $code,
             'message' => $message,
-            'data'    => $result,
+            'data' => $result,
         ];
+
         return response()->json($response, $code);
     }
 
-    public static function errorResponse($message = null, $result = null, $code = 404):JsonResponse
+    public static function error($message = null, $result = null, $code = 404): JsonResponse
     {
         $response = [
             'status' => $code,
             'message' => $message,
-            'data'    => $result,
+            'data' => $result,
         ];
+
         return response()->json($response, $code);
     }
 }

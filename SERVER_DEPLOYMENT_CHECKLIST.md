@@ -10,8 +10,8 @@
    - **Impact**: Would cause "Class not found" errors on Linux servers
 
 2. **Import Case Sensitivity** ✅ FIXED
-   - Routes had `APi\SettingController` and `API\NotificationSettingsController`
-   - Fixed to: `Api\SettingController` and `Api\NotificationSettingsController`
+   - Routes had `APi\SettingController` and `API\NotificationSettingController`
+   - Fixed to: `Api\SettingController` and `Api\NotificationSettingController`
    - **Impact**: Would cause autoloader failures on Linux servers
 
 ---

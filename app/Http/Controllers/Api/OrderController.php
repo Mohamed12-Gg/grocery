@@ -3,56 +3,43 @@
 namespace App\Http\Controllers\Api;
 
 use App\Actions\Api\Order\StoreOrderAction;
-use Stripe\Stripe;
-use App\Models\Cart;
-use App\Models\Meal;
-use App\Models\Order;
-use App\Models\Address;
-use App\Models\OrderItem;
-use App\Models\OrderNote;
-use Stripe\PaymentIntent;
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreOrderRequest;
-use App\Services\ShippingService;
+use App\Models\Cart;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Traits\ApiResponse;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Stripe\PaymentIntent;
+use Stripe\Stripe;
 
 class OrderController extends Controller
 {
-
+    use ApiResponse;
+    
     public function show(Request $request, Order $order)
     {
         $this->authorize('view', $order);
         $order = $order->load(['items.meal', 'address']);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Order retrieved successfully',
-            'data' => $this->formatOrder($order),
-        ]);
+        return $this->success('Order retrieved successfully', $this->formatOrder($order));
     }
-    
+
     /**
      * Create a new order.
      */
     public function store(StoreOrderRequest $request, StoreOrderAction $action): JsonResponse
     {
-        try{
+        try {
             $order = $action->execute($request->validated(), $request->user());
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Order created successfully',
-                'data' => $this->formatOrder($order),
-            ], 201);
+            return $this->success('Order created successfully', $this->formatOrder($order));
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to create order',
-                'error' => $e->getMessage(),
-            ], 500);
+
+            return $this->error('Failed to create order', ['error' => $e->getMessage()], 500);
         }
     }
 
@@ -67,7 +54,7 @@ class OrderController extends Controller
         foreach ($cartItems as $cartItem) {
             $meal = $cartItem->meal;
 
-            if (!$meal) {
+            if (! $meal) {
                 return [
                     'success' => false,
                     'response' => [
@@ -77,7 +64,7 @@ class OrderController extends Controller
                 ];
             }
 
-            if (!$meal->is_available) {
+            if (! $meal->is_available) {
                 return [
                     'success' => false,
                     'response' => [
@@ -155,7 +142,7 @@ class OrderController extends Controller
 
         Stripe::setApiKey(config('services.stripe.secret'));
 
-        if (!$user->stripe_customer_id) {
+        if (! $user->stripe_customer_id) {
             return [
                 'success' => false,
                 'response' => [
@@ -167,7 +154,7 @@ class OrderController extends Controller
 
         try {
             $paymentIntent = PaymentIntent::create([
-                'amount' => (int)($total * 100),
+                'amount' => (int) ($total * 100),
                 'currency' => 'usd',
                 'customer' => $user->stripe_customer_id,
                 'payment_method' => $validated['payment_method_id'],
@@ -180,23 +167,14 @@ class OrderController extends Controller
                     'success' => false,
                     'response' => [
                         'success' => false,
-                        'message' => 'Payment failed: ' . $paymentIntent->status,
+                        'message' => 'Payment failed: '.$paymentIntent->status,
                     ],
                 ];
             }
 
-            return [
-                'success' => true,
-                'stripe_payment_intent_id' => $paymentIntent->id,
-            ];
+            return $this->success('Payment processed successfully', ['stripe_payment_intent_id' => $paymentIntent->id]);
         } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'response' => [
-                    'success' => false,
-                    'message' => 'Payment processing failed: ' . $e->getMessage(),
-                ],
-            ];
+            return $this->error('Payment processing failed: '.$e->getMessage(), null, 402);
         }
     }
 
@@ -264,26 +242,20 @@ class OrderController extends Controller
         try {
             $user = $request->user();
 
-            $orders = Order::
-                with(['items.meal.category', 'items.meal.subcategory', 'address'])
+            $orders = Order::with(['items.meal.category', 'items.meal.subcategory', 'address'])
                 ->orderBy('created_at', 'desc')
                 ->get()
                 ->map(function ($order) {
                     return $this->formatOrder($order);
                 });
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Orders retrieved successfully',
-                'data' => $orders,
+            return $this->success('Orders retrieved successfully', [
+                'orders' => $orders,
                 'total_count' => $orders->count(),
             ]);
+
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to retrieve orders',
-                'error' => $e->getMessage(),
-            ], 500);
+            return $this->error('Failed to retrieve orders', ['error' => $e->getMessage()], 500);
         }
     }
 
@@ -301,11 +273,8 @@ class OrderController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->first();
 
-            if (!$order) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No active order found',
-                ], 404);
+            if (! $order) {
+                return $this->error('No active order found', null, 404);
             }
 
             if ($order->status === 'awaiting_payment') {
@@ -320,68 +289,60 @@ class OrderController extends Controller
                 ]);
             }
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Order tracking retrieved successfully',
-                'data' => [
-                    'order' => $this->formatOrder($order),
-                    'tracking' => [
-                        'position' => $order->status_position,
-                        'status' => $order->status,
-                        'status_description' => $order->status_description,
-                        'positions' => [
-                            [
-                                'position' => 1,
-                                'status' => 'placed',
-                                'label' => 'Order Placed',
-                                'description' => 'Your order has been placed',
-                                'completed' => in_array($order->status, ['placed', 'processing', 'shipping', 'out_for_delivery', 'delivered']),
-                                'timestamp' => $order->placed_at,
-                            ],
-                            [
-                                'position' => 2,
-                                'status' => 'processing',
-                                'label' => 'Processing',
-                                'description' => 'Your order is being processed',
-                                'completed' => in_array($order->status, ['processing', 'shipping', 'out_for_delivery', 'delivered']),
-                                'timestamp' => $order->processing_at,
-                            ],
-                            [
-                                'position' => 3,
-                                'status' => 'shipping',
-                                'label' => 'Shipping',
-                                'description' => 'Your order is being shipped',
-                                'completed' => in_array($order->status, ['shipping', 'out_for_delivery', 'delivered']),
-                                'timestamp' => $order->shipping_at,
-                            ],
-                            [
-                                'position' => 4,
-                                'status' => 'out_for_delivery',
-                                'label' => 'Out for Delivery',
-                                'description' => 'Your order is on the way',
-                                'completed' => in_array($order->status, ['out_for_delivery', 'delivered']),
-                                'timestamp' => $order->out_for_delivery_at,
-                            ],
-                            [
-                                'position' => 5,
-                                'status' => 'delivered',
-                                'label' => 'Delivered',
-                                'description' => 'Your order has been delivered',
-                                'completed' => $order->status === 'delivered',
-                                'timestamp' => $order->delivered_at,
-                            ],
+            return $this->success('Order tracking retrieved successfully', [
+                'order' => $this->formatOrder($order),
+                'tracking' => [
+                    'position' => $order->status_position,
+                    'status' => $order->status,
+                    'status_description' => $order->status_description,
+                    'positions' => [
+                        [
+                            'position' => 1,
+                            'status' => 'placed',
+                            'label' => 'Order Placed',
+                            'description' => 'Your order has been placed',
+                            'completed' => in_array($order->status, ['placed', 'processing', 'shipping', 'out_for_delivery', 'delivered']),
+                            'timestamp' => $order->placed_at,
+                        ],
+                        [
+                            'position' => 2,
+                            'status' => 'processing',
+                            'label' => 'Processing',
+                            'description' => 'Your order is being processed',
+                            'completed' => in_array($order->status, ['processing', 'shipping', 'out_for_delivery', 'delivered']),
+                            'timestamp' => $order->processing_at,
+                        ],
+                        [
+                            'position' => 3,
+                            'status' => 'shipping',
+                            'label' => 'Shipping',
+                            'description' => 'Your order is being shipped',
+                            'completed' => in_array($order->status, ['shipping', 'out_for_delivery', 'delivered']),
+                            'timestamp' => $order->shipping_at,
+                        ],
+                        [
+                            'position' => 4,
+                            'status' => 'out_for_delivery',
+                            'label' => 'Out for Delivery',
+                            'description' => 'Your order is on the way',
+                            'completed' => in_array($order->status, ['out_for_delivery', 'delivered']),
+                            'timestamp' => $order->out_for_delivery_at,
+                        ],
+                        [
+                            'position' => 5,
+                            'status' => 'delivered',
+                            'label' => 'Delivered',
+                            'description' => 'Your order has been delivered',
+                            'completed' => $order->status === 'delivered',
+                            'timestamp' => $order->delivered_at,
                         ],
                     ],
                 ],
             ]);
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to track order',
-                'error' => $e->getMessage(),
-            ], 500);
+            return $this->error('Failed to track order', ['error' => $e->getMessage()], 500);
         }
-    }
+    }   
 
     /**
      * Format order data for response.

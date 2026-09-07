@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\NotificationSettingsController;
 use App\Http\Controllers\Api\OfferController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\ProcessPaymentController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\SettingController;
 use App\Http\Controllers\Api\SmartListController;
@@ -205,6 +206,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/', [OrderController::class, 'store']);
         Route::get('/', [OrderController::class, 'index']);
         Route::get('/track', [TrackController::class, '__invoke']);
+        Route::get('/process-payments', [ProcessPaymentController::class, '__invoke']);
         Route::get('/{id}', [OrderController::class, 'show']);
     });
 

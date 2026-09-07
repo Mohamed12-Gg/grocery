@@ -25,9 +25,6 @@ class OrderController extends Controller
         return $this->success('Order retrieved successfully', $data);
     }
 
-    /**
-     * Create a new order.
-     */
     public function store(StoreOrderRequest $request, StoreOrderAction $action): JsonResponse
     {
         try {
@@ -43,17 +40,13 @@ class OrderController extends Controller
         }
     }
 
-    /**
-     * Get all user orders.
-     */
+
     public function index(Request $request): JsonResponse
     {
         try {
-            $user = $request->user();
-
             $orders = Order::with(['items.meal.category', 'items.meal.subcategory', 'address'])
-                ->orderBy('created_at', 'desc')
-                ->get()
+                ->latest()
+                ->paginate(Controller::PAGINATION_SIZE)
                 ->map(function ($order) {
                     return OrderResource::make($order)->toArray($request);
                 });

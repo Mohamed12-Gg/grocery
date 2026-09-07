@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\Notification\NotificationController;
 use App\Http\Controllers\Api\Notification\NotificationSettingController;
 use App\Http\Controllers\Api\OfferController;
 use App\Http\Controllers\Api\Order\OrderController;
+use App\Http\Controllers\Api\Order\TrackController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ProcessPaymentController;
 use App\Http\Controllers\Api\ProfileController;
@@ -31,7 +32,6 @@ use App\Http\Controllers\Api\StripeController;
 use App\Http\Controllers\Api\StripeWebhookController;
 use App\Http\Controllers\Api\SubcategoryController;
 use App\Http\Controllers\Api\SupportController;
-use App\Http\Controllers\Api\Order\TrackController;
 use App\Http\Controllers\Api\UserAppSettingsController;
 use App\Http\Controllers\Api\V1\CategoryController as ApiCategoryController;
 use App\Http\Controllers\Api\V1\MealController as ApiMealController;
@@ -143,14 +143,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('smart-lists', SmartListController::class);
 
     Route::prefix('notification-settings')->group(function () {
-        Route::get('/', [NotificationSettingController::class, 'index']);
-        Route::put('/', [NotificationSettingController::class, 'update']);
         Route::put('/category/{category}', [NotificationCategoryController::class, 'update']);
+        Route::apiResource('/', NotificationSettingController::class)->only(['index', 'update']);
     });
 
     Route::prefix('notifications')->group(function () {
         // Get notifications
-        Route::get('/', [NotificationController::class, 'index']);
         Route::get('/with-resources', [NotificationController::class, 'indexWithResources']);
 
         // Statistics
@@ -159,10 +157,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/recent', [NotificationController::class, 'recent']);
 
         // Single notification operations
-        Route::get('/{id}', [NotificationController::class, 'show']);
         Route::put('/{id}/read', [NotificationController::class, 'markAsRead']);
         Route::put('/{id}/unread', [NotificationController::class, 'markAsUnread']);
-        Route::delete('/{id}', [NotificationController::class, 'destroy']);
 
         // Bulk operations
         Route::put('/mark-all-read', [NotificationController::class, 'markAllAsRead']);
@@ -171,6 +167,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Filtered notifications
         Route::get('/type/{type}', [NotificationController::class, 'byType']);
+        Route::apiResource('/', NotificationController::class)->only(['index', 'show', 'destroy']);
     });
 
     // Cart routes

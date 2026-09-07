@@ -202,13 +202,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/cards/{id}', [StripeController::class, 'deleteCard']);
 
     // Order routes
-    Route::prefix('orders')->group(function () {
-        Route::post('/', [OrderController::class, 'store']);
-        Route::get('/', [OrderController::class, 'index']);
-        Route::get('/track', [TrackController::class, '__invoke']);
-        Route::get('/process-payments', [ProcessPaymentController::class, '__invoke']);
-        Route::get('/{id}', [OrderController::class, 'show']);
-    });
+    Route::get('/orders/track', [TrackController::class, '__invoke']);
+    Route::get('/orders/process-payments', [ProcessPaymentController::class, '__invoke']);
+    Route::apiResource('orders', OrderController::class)->only(['index', 'show', 'store']);
 
     // Payment routes
     Route::prefix('payments')->group(function () {

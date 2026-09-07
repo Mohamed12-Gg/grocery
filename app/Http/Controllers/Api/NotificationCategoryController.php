@@ -15,7 +15,7 @@ class NotificationCategoryController extends Controller
         $user = Auth::user();
         $settings = $user->initializeNotificationSettings();
 
-        $fields = $this->getCategoryFields($category);
+        $fields = config("category_fields.{$category}", []);
 
         if (empty($fields)) {
             return $this->error('Invalid category', 400);

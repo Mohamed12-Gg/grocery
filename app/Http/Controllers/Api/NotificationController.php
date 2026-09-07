@@ -472,7 +472,7 @@ class NotificationController extends Controller
             'read_at' => $notification->read_at?->toISOString(),
             'created_at' => $notification->created_at?->toISOString() ?? '',
             'created_at_human' => $notification->created_at?->diffForHumans() ?? '',
-            'icon' => $this->getIconForType($type),
+            'icon' => config("notification.{$type}", 'bell'),
             'priority' => is_string($data['priority'] ?? null) ? $data['priority'] : 'normal',
         ];
 
@@ -486,26 +486,4 @@ class NotificationController extends Controller
         return $baseData;
     }
 
-    /**
-     * Get appropriate icon for notification type
-     */
-    private function getIconForType(string $type): string
-    {
-        $icons = [
-            'order_confirmation' => 'shopping-bag',
-            'order_shipped' => 'truck',
-            'delivery_updates' => 'package',
-            'out_of_stock_alerts' => 'alert-triangle',
-            'weekly_discounts' => 'percent',
-            'exclusive_member_offers' => 'crown',
-            'seasonal_campaigns' => 'gift',
-            'cart_reminders' => 'shopping-cart',
-            'payment_billing' => 'credit-card',
-            'system' => 'bell',
-            'account' => 'user',
-            'security' => 'shield',
-        ];
-
-        return $icons[$type] ?? 'bell';
-    }
 }

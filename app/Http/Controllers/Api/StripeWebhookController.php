@@ -12,6 +12,7 @@ use UnexpectedValueException;
 
 class StripeWebhookController extends Controller
 {
+    use App\Traits\V1\ApiResponse;
     public function __construct(
         private readonly StripeWebhookService $webhookService
     ) {}

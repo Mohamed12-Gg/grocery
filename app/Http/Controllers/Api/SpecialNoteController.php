@@ -9,12 +9,10 @@ use App\Http\Resources\Api\SpecialNoteResource;
 
 class SpecialNoteController extends Controller
 {
+    use \App\Traits\V1\ApiResponse;
     public function index()
     {
         $specialNotes = SpecialNote::all();
-        return response()->json([
-            'success' => true,
-            'data' => SpecialNoteResource::collection($specialNotes)
-        ]);
+        return self::successResponse('Special notes retrieved successfully', SpecialNoteResource::collection($specialNotes));
     }
 }

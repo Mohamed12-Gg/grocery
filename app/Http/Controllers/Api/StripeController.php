@@ -12,6 +12,8 @@ use Stripe\PaymentIntent;
 
 class StripeController extends Controller
 {
+    use App\Traits\V1\ApiResponse;
+
     public function createSetupIntent(Request $request)
     {
         Stripe::setApiKey(config('services.stripe.secret'));
@@ -30,7 +32,9 @@ class StripeController extends Controller
             'payment_method_types' => ['card'],
         ]);
 
-        return response()->json(['clientSecret' => $intent->client_secret]);
+        return self::successResponse('Setup intent created successfully.', [
+            'client_secret' => $intent->client_secret,
+        ]);
     }
 
     public function listCards(Request $request)
@@ -45,7 +49,7 @@ class StripeController extends Controller
             'type' => 'card',
         ]);
 
-        return response()->json($cards->data);
+        return self::successResponse('Cards retrieved successfully.', $cards->data);
     }
 
 
@@ -68,7 +72,10 @@ class StripeController extends Controller
             'confirm' => true,
         ]);
 
-        return response()->json(['status' => 'success', 'payment_intent' => $paymentIntent]);
+        return self::successResponse('Payment successful.', [
+            'payment_intent_id' => $paymentIntent->id,
+            'status' => $paymentIntent->status,
+        ]);
     }
 
     public function deleteCard(Request $request, $id)
@@ -78,6 +85,8 @@ class StripeController extends Controller
         $paymentMethod = PaymentMethod::retrieve($id);
         $paymentMethod->detach();
 
-        return response()->json(['status' => 'deleted']);
+        return self::successResponse('Card deleted successfully.', [
+            'payment_method_id' => $id,
+        ]);
     }
 }

@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Validator;
 
 class StaticPageController extends Controller
 {
+    use \App\Traits\V1\ApiResponse;
     /**
      * Display a listing of static pages.
      */
@@ -42,7 +43,7 @@ class StaticPageController extends Controller
         $perPage = $request->get('per_page', 20);
         $pages = $query->paginate($perPage);
 
-        return new StaticPageCollection($pages);
+        return successResponse('Pages retrieved successfully', new StaticPageCollection($pages));
     }
 
     /**
@@ -50,7 +51,7 @@ class StaticPageController extends Controller
      */
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), [
+        $validator = $request->validate([
             'slug' => 'required|string|unique:static_pages,slug|max:100',
             'title' => 'required|string|max:255',
             'content' => 'required|string',
@@ -62,18 +63,12 @@ class StaticPageController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
+            return self::errorResponse('Validation failed', $validator->errors(), 422);
         }
 
         $page = StaticPage::create($validator->validated());
 
-        return response()->json([
-            'message' => 'Page created successfully',
-            'data' => new StaticPageResource($page)
-        ], 201);
+        return self::successResponse('Page created successfully', new StaticPageResource($page), 201);
     }
 
     /**
@@ -84,16 +79,12 @@ class StaticPageController extends Controller
         $page = StaticPage::bySlug($slug)->first();
 
         if (!$page) {
-            return response()->json([
-                'message' => 'Page not found'
-            ], 404);
+            return self::errorResponse('Page not found', null, 404);
         }
 
         // Check if page is published for non-admin users
         if (!$page->is_published && (!request()->user() || !request()->user()->is_admin)) {
-            return response()->json([
-                'message' => 'Page not found'
-            ], 404);
+            return self::errorResponse('Page not found', null, 404);
         }
 
         return new StaticPageResource($page);
@@ -112,7 +103,7 @@ class StaticPageController extends Controller
      */
     public function update(Request $request, StaticPage $staticPage)
     {
-        $validator = Validator::make($request->all(), [
+        $validator = $request->validate([
             'slug' => 'sometimes|required|string|max:100|unique:static_pages,slug,' . $staticPage->id,
             'title' => 'sometimes|required|string|max:255',
             'content' => 'sometimes|required|string',
@@ -124,18 +115,12 @@ class StaticPageController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
+            return self::errorResponse('Validation failed', $validator->errors(), 422);
         }
 
         $staticPage->update($validator->validated());
 
-        return response()->json([
-            'message' => 'Page updated successfully',
-            'data' => new StaticPageResource($staticPage)
-        ]);
+        return self::successResponse('Page updated successfully', new StaticPageResource($staticPage));
     }
 
     /**
@@ -145,9 +130,7 @@ class StaticPageController extends Controller
     {
         $staticPage->delete();
 
-        return response()->json([
-            'message' => 'Page deleted successfully'
-        ]);
+        return self::successResponse('Page deleted successfully', null);
     }
 
     /**
@@ -160,8 +143,6 @@ class StaticPageController extends Controller
             ->ordered()
             ->get(['slug', 'title']);
 
-        return response()->json([
-            'data' => $pages
-        ]);
+        return self::successResponse('Important pages retrieved successfully', $pages);
     }
 }

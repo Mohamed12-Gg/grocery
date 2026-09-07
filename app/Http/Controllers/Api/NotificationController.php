@@ -27,7 +27,7 @@ class NotificationController extends Controller
         $transformed = $notifications->getCollection()->map(fn ($n) => $this->transformNotification($n))->values();
         $notifications->setCollection($transformed);
 
-        return $this->successResponse([
+        return $this->success([
             'notifications' => $notifications->items(),
             'unread_count' => $user->unreadNotifications()->count(),
             'total_count' => $user->notifications()->count(),
@@ -38,7 +38,6 @@ class NotificationController extends Controller
                 'total' => $notifications->total(),
             ],
         ]);
-
     }
 
     /**
@@ -116,7 +115,7 @@ class NotificationController extends Controller
 
         $notifications->setCollection($transformed);
 
-        return $this->successResponse([
+        return $this->success([
             'notifications' => $notifications->items(),
             'unread_count' => $user->unreadNotifications()->count(),
             'total_count' => $user->notifications()->count(),
@@ -322,10 +321,7 @@ class NotificationController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors(),
-            ], 422);
+            return $this->error('Invalid request data', 422, $validator->errors());
         }
 
         $user = Auth::user();
@@ -349,11 +345,8 @@ class NotificationController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors(),
-            ], 422);
-        }
+            return $this->error('Invalid request data', 422, $validator->errors());
+        }}
 
         if (! $request->confirmation) {
             return $this->error('Please confirm you want to clear all notifications', 400);
@@ -444,13 +437,10 @@ class NotificationController extends Controller
             return $this->transformNotification($notification);
         });
 
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'notifications' => $transformedNotifications,
-                'total_recent' => $recentNotifications->count(),
-                'unread_recent' => $recentNotifications->whereNull('read_at')->count(),
-            ],
+        return $this->success([
+            'notifications' => $transformedNotifications,
+            'total_recent' => $recentNotifications->count(),
+            'unread_recent' => $recentNotifications->whereNull('read_at')->count(),
         ]);
     }
 

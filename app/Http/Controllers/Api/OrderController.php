@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Actions\Api\Order\StoreOrderAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreOrderRequest;
+use App\Http\Resources\OrderResource;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -23,8 +24,8 @@ class OrderController extends Controller
     {
         $this->authorize('view', $order);
         $order = $order->load(['items.meal', 'address']);
-
-        return $this->success('Order retrieved successfully', $this->formatOrder($order));
+        $data = OrderResource::make($order)->toArray($request);
+        return $this->success('Order retrieved successfully', $data);
     }
 
     /**
@@ -35,7 +36,8 @@ class OrderController extends Controller
         try {
             $order = $action->execute($request->validated(), $request->user());
 
-            return $this->success('Order created successfully', $this->formatOrder($order));
+            $data = OrderResource::make($order)->toArray($request);
+            return $this->success('Order created successfully', $data);
         } catch (\Exception $e) {
             DB::rollBack();
 
@@ -102,7 +104,7 @@ class OrderController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get()
                 ->map(function ($order) {
-                    return $this->formatOrder($order);
+                    return OrderResource::make($order)->toArray($request);
                 });
 
             return $this->success('Orders retrieved successfully', [
@@ -138,7 +140,7 @@ class OrderController extends Controller
                     'success' => true,
                     'message' => 'Order is waiting for payment. Complete checkout to continue.',
                     'data' => [
-                        'order' => $this->formatOrder($order),
+                        'order' => OrderResource::make($order)->toArray($request),
                         'awaiting_payment' => true,
                         'tracking' => null,
                     ],
@@ -146,7 +148,7 @@ class OrderController extends Controller
             }
 
             return $this->success('Order tracking retrieved successfully', [
-                'order' => $this->formatOrder($order),
+                'order' => OrderResource::make($order)->toArray($request),
                 'tracking' => [
                     'position' => $order->status_position,
                     'status' => $order->status,
@@ -198,82 +200,6 @@ class OrderController extends Controller
         } catch (\Exception $e) {
             return $this->error('Failed to track order', ['error' => $e->getMessage()], 500);
         }
-    }   
-
-    /**
-     * Format order data for response.
-     */
-    private function formatOrder(Order $order): array
-    {
-        return [
-            'id' => $order->id,
-            'order_number' => $order->order_number,
-            'payment_method' => $order->payment_method,
-            'stripe_payment_intent_id' => $order->stripe_payment_intent_id,
-            'delivery_type' => $order->delivery_type,
-            'status' => $order->status,
-            'status_position' => $order->status_position,
-            'status_description' => $order->status_description,
-            'items' => $order->items->map(function ($item) {
-                return [
-                    'id' => $item->id,
-                    'meal' => [
-                        'id' => $item->meal->id,
-                        'title' => $item->meal->title,
-                        'slug' => $item->meal->slug,
-                        'image_url' => $item->meal->image_url,
-                        ...$item->meal->getApiPriceAttributes(),
-                        'category' => $item->meal->category ? [
-                            'id' => $item->meal->category->id,
-                            'name' => $item->meal->category->name,
-                        ] : null,
-                        'subcategory' => $item->meal->subcategory ? [
-                            'id' => $item->meal->subcategory->id,
-                            'name' => $item->meal->subcategory->name,
-                        ] : null,
-                    ],
-                    'quantity' => $item->quantity,
-                    'unit_price' => (float) $item->unit_price,
-                    'discount_amount' => (float) $item->discount_amount,
-                    'subtotal' => (float) $item->subtotal,
-                ];
-            }),
-            'address' => $order->address ? [
-                'id' => $order->address->id,
-                'label' => $order->address->label,
-                'full_name' => $order->address->full_name,
-                'phone' => $order->address->phone,
-                'country_code' => $order->address->country_code,
-                'street_address' => $order->address->street_address,
-                'building_number' => $order->address->building_number,
-                'floor' => $order->address->floor,
-                'apartment' => $order->address->apartment,
-                'landmark' => $order->address->landmark,
-                'city' => $order->address->city,
-                'state' => $order->address->state,
-                'postal_code' => $order->address->postal_code,
-                'country' => $order->address->country,
-                'full_address' => $order->address->full_address,
-                'latitude' => $order->address->latitude,
-                'longitude' => $order->address->longitude,
-            ] : null,
-            'subtotal' => $order->subtotal,
-            'tax' => $order->tax,
-            'discount' => $order->discount,
-            'shipping_fee' => (float) ($order->shipping_fee ?? 0),
-            'total' => $order->total,
-            'notes' => $order->notes,
-            'created_at' => $order->created_at,
-            'updated_at' => $order->updated_at,
-            'placed_at' => $order->placed_at,
-            'processing_at' => $order->processing_at,
-            'shipping_at' => $order->shipping_at,
-            'out_for_delivery_at' => $order->out_for_delivery_at,
-            'delivered_at' => $order->delivered_at,
-            'estimated_delivery_time' => $order->estimated_delivery_time,
-            'special_note' => $order->special_note,
-            'schedule_delivery' => $order->schedule_delivery,
-            'delivery_speed' => $order->delivery_speed,
-        ];
     }
+
 }

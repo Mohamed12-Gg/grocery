@@ -22,6 +22,7 @@ class OrderController extends Controller
 
     public function show(Request $request, Order $order)
     {
+        $this->authorize('view', $order);
         $order = $order->load(['items.meal', 'address']);
 
         return response()->json([

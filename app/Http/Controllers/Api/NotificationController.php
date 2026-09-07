@@ -234,11 +234,8 @@ class NotificationController extends Controller
     /**
      * Get a single notification
      */
-    public function show(string $id): JsonResponse
+    public function show(Notification $notification): JsonResponse
     {
-        $user = Auth::user();
-        $notification = $user->notifications()->findOrFail($id);
-
         // Mark as read when viewing
         if (! $notification->read_at) {
             $notification->markAsRead();
@@ -252,11 +249,8 @@ class NotificationController extends Controller
     /**
      * Mark notification as read
      */
-    public function markAsRead(string $id): JsonResponse
+    public function markAsRead(Notification $notification): JsonResponse
     {
-        $user = Auth::user();
-        $notification = $user->notifications()->findOrFail($id);
-
         if (! $notification->read_at) {
             $notification->markAsRead();
 
@@ -272,11 +266,8 @@ class NotificationController extends Controller
     /**
      * Mark notification as unread
      */
-    public function markAsUnread(string $id): JsonResponse
+    public function markAsUnread(Notification $notification): JsonResponse
     {
-        $user = Auth::user();
-        $notification = $user->notifications()->findOrFail($id);
-
         if ($notification->read_at) {
             $notification->markAsUnread();
 
@@ -311,11 +302,8 @@ class NotificationController extends Controller
     /**
      * Delete a notification
      */
-    public function destroy(string $id): JsonResponse
+    public function destroy(Notification $notification): JsonResponse
     {
-        $user = Auth::user();
-        $notification = $user->notifications()->findOrFail($id);
-
         $notification->delete();
 
         return $this->success([

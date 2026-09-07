@@ -97,6 +97,7 @@ class Meal extends Model
         return $this->hasMany(Favorite::class);
     }
 
+   
     /**
      * Get the users who favorited this meal.
      */

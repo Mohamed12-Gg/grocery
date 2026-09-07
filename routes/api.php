@@ -41,7 +41,7 @@ use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\MealController as ApiMealController;
 use Illuminate\Support\Facades\Route;
 use App\Traits\V1;
-
+use App\http\Controllers\Api\ReviewController;
 use App\Jobs\SendInvoiceJob;
 /*
 |--------------------------------------------------------------------------
@@ -139,6 +139,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/image', [ProfileController::class, 'deleteImage']);
         Route::get('/sessions', [ProfileController::class, 'sessions']);
         Route::delete('/sessions/{tokenId}', [ProfileController::class, 'destroySession']);
+    });
+    Route::prefix('reviews')->group(function () {
+        Route::get('/meal/{meal}', [ReviewController::class, 'getMealReviews']);
+        Route::get('/user/{userId}', [ReviewController::class, 'getUserReviews']);
+        Route::get('/meal/{meal}/stats', [ReviewController::class, 'getMealReviewStats']);
+        Route::resource('/', ReviewController::class)->only(['store', 'show', 'update', 'destroy']);
     });
 
     // Address routes

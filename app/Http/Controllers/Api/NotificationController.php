@@ -346,7 +346,7 @@ class NotificationController extends Controller
 
         if ($validator->fails()) {
             return $this->error('Invalid request data', 422, $validator->errors());
-        }}
+        }
 
         if (! $request->confirmation) {
             return $this->error('Please confirm you want to clear all notifications', 400);
@@ -475,5 +475,4 @@ class NotificationController extends Controller
 
         return $baseData;
     }
-
 }

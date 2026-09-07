@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Resources\Api\ChatbotResource;
+use App\Traits\V1\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Models\ChatbotMessage;
 use App\Services\ChatbotService;
@@ -13,6 +15,7 @@ use Throwable;
 
 class ChatbotController extends Controller
 {
+        use ApiResponse;
     public function __construct(private readonly ChatbotService $chatbotService) {}
 
     /**
@@ -22,14 +25,10 @@ class ChatbotController extends Controller
      */
     public function chat(Request $request): JsonResponse
     {
-        try {
             foreach (['question', 'message'] as $key) {
                 if ($request->hasFile($key)) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Send the question as plain text, not as a file upload.',
-                        'errors' => ['question' => ['The question must be a text value, not a file.']],
-                    ], 422);
+                    return self::errorResponse('Send the question as plain text, not as a file upload.',
+                    ['question' => ['The question must be a text value, not a file.']],422);
                 }
             }
 
@@ -38,11 +37,9 @@ class ChatbotController extends Controller
             }
 
             if (is_array($request->input('question'))) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Send a single question text only.',
-                    'errors' => ['question' => ['Multiple question values are not allowed.']],
-                ], 422);
+                return self::errorResponse('Send a single question text only.',
+                    ['question' => ['Multiple question values are not allowed.']],422);
+
             }
 
             $validated = $request->validate([
@@ -56,16 +53,13 @@ class ChatbotController extends Controller
             $question = trim((string) $validated['question']);
 
             if ($question === '') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Validation failed',
-                    'errors' => ['question' => ['A non-empty question is required.']],
-                ], 422);
+                return self::errorResponse('Validation failed',
+                    ['question' => ['A non-empty question is required.']],422);
             }
 
             $user = $request->user();
             if ($user === null) {
-                return response()->json(['success' => false, 'message' => 'Authentication required'], 401);
+                return self::errorResponse("authentication required",null,401);
             }
 
             $conversationId = $validated['conversation_id'] ?? $validated['session_id'] ?? null;
@@ -82,37 +76,9 @@ class ChatbotController extends Controller
                 $result['rating'] = $validated['rating'];
             }
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Chat response generated successfully',
-                'data' => [
-                    'id' => $result['id'],
-                    'conversation_id' => $result['conversation_id'],
-                    'session_id' => $result['conversation_id'],  // backwards compatibility
-                    'question' => $result['question'],
-                    'answer' => $result['answer'],
-                    'rating' => $result['rating'],
-                ],
-            ]);
+            return self::successResponse('Chat response generated successfully',new ChatbotResource($result));
 
-        } catch (ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $e->errors(),
-            ], 422);
-        } catch (Throwable $e) {
-            Log::error('Chatbot Error', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to process chat request',
-                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error',
-            ], 500);
-        }
+        
     }
 
     /**
@@ -120,7 +86,6 @@ class ChatbotController extends Controller
      */
     public function history(Request $request): JsonResponse
     {
-        try {
             $perPage = min(max((int) $request->input('per_page', 15), 1), 50);
             $messages = $request->user()
                 ->chatbotMessages()
@@ -136,10 +101,7 @@ class ChatbotController extends Controller
                 'created_at' => $m->created_at,
             ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Chat history retrieved successfully',
-                'data' => [
+            return self::successResponse('Chat history retrieved successfully',[
                     'items' => $items,
                     'pagination' => [
                         'current_page' => $messages->currentPage(),
@@ -149,17 +111,8 @@ class ChatbotController extends Controller
                         'from' => $messages->firstItem(),
                         'to' => $messages->lastItem(),
                     ],
-                ],
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Chatbot history error', ['message' => $e->getMessage()]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to retrieve chat history',
-                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error',
-            ], 500);
-        }
+                ]);
+        
     }
 
     /**
@@ -186,10 +139,6 @@ class ChatbotController extends Controller
                 ['id' => 'offers',   'label' => 'Coupons & offers',   'question' => 'What promo codes or offers are available?'],
             ];
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Suggestions retrieved successfully',
-            'data' => ['suggestions' => $suggestions],
-        ]);
+        return self::successResponse('Suggestions retrieved successfully',['suggestions' => $suggestions]);
     }
 }

@@ -169,4 +169,13 @@ class AuthService
 
         return true;
     }
+    public function changePassword(User $user, $password): bool
+    {
+        $user->update([
+            'password'=>Hash::make($password)
+        ]);
+
+
+        return true;
+    }
 }

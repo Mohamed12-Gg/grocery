@@ -15,7 +15,7 @@ use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\LoyaltyController;
 use App\Http\Controllers\Api\MealController;
 use App\Http\Controllers\Api\NotificationController;
-use App\Http\Controllers\Api\NotificationSettingsController;
+use App\Http\Controllers\Api\NotificationSettingController;
 use App\Http\Controllers\Api\OfferController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PaymentController;
@@ -142,9 +142,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('smart-lists', SmartListController::class);
 
     Route::prefix('notification-settings')->group(function () {
-        Route::get('/', [NotificationSettingsController::class, 'index']);
-        Route::put('/', [NotificationSettingsController::class, 'update']);
-        Route::put('/category/{category}', [NotificationSettingsController::class, 'updateCategory']);
+        Route::get('/', [NotificationSettingController::class, 'index']);
+        Route::put('/', [NotificationSettingController::class, 'update']);
+        Route::put('/category/{category}', [NotificationSettingController::class, 'updateCategory']);
     });
 
     Route::prefix('notifications')->group(function () {

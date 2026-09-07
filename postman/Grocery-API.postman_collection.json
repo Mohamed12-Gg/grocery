@@ -976,7 +976,7 @@
               }
             ],
             "url": "{{base_url}}/api/notification-settings",
-            "description": "App\\Http\\Controllers\\Api\\NotificationSettingsController@index",
+            "description": "App\\Http\\Controllers\\Api\\NotificationSettingController@index",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -1005,7 +1005,7 @@
               }
             ],
             "url": "{{base_url}}/api/notification-settings",
-            "description": "App\\Http\\Controllers\\Api\\NotificationSettingsController@update",
+            "description": "App\\Http\\Controllers\\Api\\NotificationSettingController@update",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -1038,7 +1038,7 @@
               }
             ],
             "url": "{{base_url}}/api/notification-settings/category/{{category}}",
-            "description": "App\\Http\\Controllers\\Api\\NotificationSettingsController@updateCategory",
+            "description": "App\\Http\\Controllers\\Api\\NotificationSettingController@updateCategory",
             "auth": {
               "type": "bearer",
               "bearer": [

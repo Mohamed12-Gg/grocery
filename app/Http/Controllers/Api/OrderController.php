@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\Api\Order\StoreOrderAction;
 use Stripe\Stripe;
 use App\Models\Cart;
 use App\Models\Meal;
@@ -35,95 +36,10 @@ class OrderController extends Controller
     /**
      * Create a new order.
      */
-    public function store(StoreOrderRequest $request): JsonResponse
+    public function store(StoreOrderRequest $request, StoreOrderAction $action): JsonResponse
     {
-        try {
-            $user = $request->user();
-            $validated = $request->validated();
-
-            // Get user's active cart
-            $cart = $user->activeCart()->with('items.meal')->first();
-
-            if (!$cart || $cart->isEmpty()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Your cart is empty. Please add items to your cart before placing an order.',
-                ], 400);
-            }
-
-            // Validate and process items from cart
-            $itemsResult = $this->validateAndProcessCartItems($cart->items);
-            if (!$itemsResult['success']) {
-                return response()->json($itemsResult['response'], 400);
-            }
-
-            $items = $itemsResult['items'];
-
-            // Calculate totals and shipping (use cart totals; add shipping for delivery)
-            $cart->calculateTotals();
-            $shippingService = app(ShippingService::class);
-            $shippingFee = $shippingService->calculateShippingFee((float) $cart->subtotal, $validated['delivery_type']);
-            $totals = [
-                'subtotal' => $cart->subtotal,
-                'tax' => $cart->tax,
-                'discount' => $cart->discount,
-                'shipping_fee' => $shippingFee,
-                'total' => (float) $cart->subtotal + (float) $cart->tax + $shippingFee,
-            ];
-            $total = $totals['total'];
-
-            // Validate amount matches cart total
-            // if (abs($total - $validated['amount']) > 0.01) {
-            //     return response()->json([
-            //         'success' => false,
-            //         'message' => 'Amount mismatch. Please recalculate your order.',
-            //         'calculated_total' => $total,
-            //         'provided_amount' => $validated['amount'],
-            //     ], 400);
-            // }
-
-            DB::beginTransaction();
-
-            // $paymentResult = match ($validated['payment_method']) {
-            //     'stripe_checkout' => ['success' => true],
-            //     default => $this->processPayment($user, $validated, $total),
-            // };
-
-            // if (! $paymentResult['success']) {
-            //     DB::rollBack();
-
-            //     return response()->json($paymentResult['response'], 400);
-            // }
-
-            $stripePaymentIntentId = $paymentResult['stripe_payment_intent_id'] ?? null;
-
-            // Create order
-            $order = $this->createOrder($user, $validated, $totals['subtotal'], $totals, $stripePaymentIntentId);
-
-            // Create order items and update stock
-            $this->createOrderItems($order, $items);
-
-            // Clear user's active cart
-            $this->clearUserCart($user);
-
-            
-            if(isset($validated['special_note_id'])) {
-                OrderNote::create([
-                    'order_id' => $order->id,
-                    'special_note_id' => $validated['special_note_id'],
-                    'notes' => $validated['notes'] ?? null,
-                ]);
-            }
-            if(isset($validated['notes'])   ) {
-                OrderNote::create([
-                    'order_id' => $order->id,
-                    'special_note_id' => null,
-                    'notes' => $validated['notes'],
-                ]);
-            }
-            DB::commit();
-
-            $order->load(['items.meal', 'address']);
+        try{
+            $order = $action->execute($request->validated(), $request->user());
 
             return response()->json([
                 'success' => true,

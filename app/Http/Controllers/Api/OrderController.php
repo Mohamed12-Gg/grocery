@@ -10,11 +10,25 @@ use App\Models\Order;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
     use ApiResponse;
+
+    public function index(Request $request): JsonResponse
+    {
+        $orders = Order::with(['items.meal.category', 'items.meal.subcategory', 'address'])
+            ->latest()
+            ->paginate(Controller::PAGINATION_SIZE)
+            ->map(function ($order) {
+                return OrderResource::make($order)->toArray($request);
+            });
+
+        return $this->success('Orders retrieved successfully', [
+            'orders' => $orders,
+            'total_count' => $orders->count(),
+        ]);
+    }
 
     public function show(Request $request, Order $order)
     {
@@ -27,37 +41,10 @@ class OrderController extends Controller
 
     public function store(StoreOrderRequest $request, StoreOrderAction $action): JsonResponse
     {
-        try {
-            $order = $action->execute($request->validated(), $request->user());
+        $order = $action->execute($request->validated(), $request->user());
 
-            $data = OrderResource::make($order)->toArray($request);
+        $data = OrderResource::make($order)->toArray($request);
 
-            return $this->success('Order created successfully', $data);
-        } catch (\Exception $e) {
-            DB::rollBack();
-
-            return $this->error('Failed to create order', ['error' => $e->getMessage()], 500);
-        }
-    }
-
-
-    public function index(Request $request): JsonResponse
-    {
-        try {
-            $orders = Order::with(['items.meal.category', 'items.meal.subcategory', 'address'])
-                ->latest()
-                ->paginate(Controller::PAGINATION_SIZE)
-                ->map(function ($order) {
-                    return OrderResource::make($order)->toArray($request);
-                });
-
-            return $this->success('Orders retrieved successfully', [
-                'orders' => $orders,
-                'total_count' => $orders->count(),
-            ]);
-
-        } catch (\Exception $e) {
-            return $this->error('Failed to retrieve orders', ['error' => $e->getMessage()], 500);
-        }
+        return $this->success('Order created successfully', $data);
     }
 }

@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\FaqController as ApiFaqController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\LoyaltyController;
 use App\Http\Controllers\Api\MealController;
+use App\Http\Controllers\Api\Notification\NotificationCategoryController;
 use App\Http\Controllers\Api\Notification\NotificationController;
 use App\Http\Controllers\Api\Notification\NotificationSettingController;
 use App\Http\Controllers\Api\OfferController;
@@ -144,7 +145,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('notification-settings')->group(function () {
         Route::get('/', [NotificationSettingController::class, 'index']);
         Route::put('/', [NotificationSettingController::class, 'update']);
-        Route::put('/category/{category}', [NotificationSettingController::class, 'updateCategory']);
+        Route::put('/category/{category}', [NotificationCategoryController::class, 'update']);
     });
 
     Route::prefix('notifications')->group(function () {

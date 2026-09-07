@@ -34,9 +34,6 @@ class DataManagementController extends Controller
         $user = $request->user();
         $this->authService->deleteAccount($user);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Account deleted successfully',
-        ]);
+        return $this->success(message: 'Account deleted successfully');
     }
 }

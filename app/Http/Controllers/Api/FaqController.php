@@ -3,11 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\FaqResource;
+use App\Http\Requests\StoreFaqRequest;
+use App\Http\Requests\UpdateFaqRequest;
 use App\Http\Resources\FaqCollection;
+use App\Http\Resources\FaqResource;
 use App\Models\Faq;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 
 class FaqController extends Controller
 {
@@ -18,17 +19,14 @@ class FaqController extends Controller
     {
         $query = Faq::query();
 
-        // Filter by category
         if ($request->has('category')) {
             $query->where('category', $request->category);
         }
 
-        // Filter active only
         if ($request->boolean('active_only', true)) {
             $query->active();
         }
 
-        // Search in question and answer
         if ($request->has('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -37,17 +35,7 @@ class FaqController extends Controller
             });
         }
 
-        // Order by
         $query->ordered();
-
-        // Get categories list
-        if ($request->boolean('with_categories', false)) {
-            $categories = Faq::active()
-                ->distinct('category')
-                ->pluck('category')
-                ->filter()
-                ->values();
-        }
 
         $perPage = $request->get('per_page', 15);
         $faqs = $query->paginate($perPage);
@@ -57,7 +45,7 @@ class FaqController extends Controller
         ];
 
         if ($request->boolean('with_categories', false)) {
-            $response['categories'] = $categories;
+            $response['categories'] = Faq::activeCategoriesList();
         }
 
         return response()->json($response);
@@ -66,29 +54,15 @@ class FaqController extends Controller
     /**
      * Store a newly created FAQ.
      */
-    public function store(Request $request)
+    public function store(StoreFaqRequest $request)
     {
-        $validator = Validator::make($request->all(), [
-            'question' => 'required|string|max:255',
-            'answer' => 'required|string',
-            'category' => 'nullable|string|max:100',
-            'order' => 'nullable|integer',
-            'is_active' => 'boolean',
-        ]);
+        $faq = Faq::create($request->validated());
 
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validation failed',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        $faq = Faq::create($validator->validated());
-
-        return response()->json([
-            'message' => 'FAQ created successfully',
-            'data' => new FaqResource($faq),
-        ], 201);
+        return $this->success(
+            data: new FaqResource($faq),
+            message: 'FAQ created successfully',
+            code: 201,
+        );
     }
 
     /**
@@ -102,29 +76,14 @@ class FaqController extends Controller
     /**
      * Update the specified FAQ.
      */
-    public function update(Request $request, Faq $faq)
+    public function update(UpdateFaqRequest $request, Faq $faq)
     {
-        $validator = Validator::make($request->all(), [
-            'question' => 'sometimes|required|string|max:255',
-            'answer' => 'sometimes|required|string',
-            'category' => 'nullable|string|max:100',
-            'order' => 'nullable|integer',
-            'is_active' => 'sometimes|boolean',
-        ]);
+        $faq->update($request->validated());
 
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validation failed',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        $faq->update($validator->validated());
-
-        return response()->json([
-            'message' => 'FAQ updated successfully',
-            'data' => new FaqResource($faq),
-        ]);
+        return $this->success(
+            data: new FaqResource($faq),
+            message: 'FAQ updated successfully',
+        );
     }
 
     /**
@@ -134,9 +93,7 @@ class FaqController extends Controller
     {
         $faq->delete();
 
-        return response()->json([
-            'message' => 'FAQ deleted successfully',
-        ]);
+        return $this->success(message: 'FAQ deleted successfully');
     }
 
     /**
@@ -144,21 +101,13 @@ class FaqController extends Controller
      */
     public function categories()
     {
-        $categories = Faq::active()
-            ->distinct('category')
-            ->pluck('category')
-            ->filter()
-            ->values();
-
-        return response()->json([
-            'data' => $categories,
-        ]);
+        return $this->success(data: Faq::activeCategoriesList());
     }
 
     /**
      * Get FAQs by category.
      */
-    public function byCategory($category)
+    public function byCategory(string $category)
     {
         $faqs = Faq::active()
             ->category($category)

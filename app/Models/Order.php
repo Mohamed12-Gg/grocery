@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+use App\Enums\OrderStatus;
+
 class Order extends Model
 {
     use HasFactory;
@@ -153,13 +155,6 @@ class Order extends Model
         return $query->where('status', 'placed');
     }
 
-    /**
-     * Scope a query to only include active orders (not cancelled or delivered).
-     */
-    public function scopeActive($query)
-    {
-        return $query->whereNotIn('status', ['cancelled', 'delivered']);
-    }
     public function notes(): HasMany
     {
         return $this->hasMany(OrderNote::class);
@@ -191,5 +186,32 @@ class Order extends Model
 
         // Nothing found
         return null;
+    }
+
+    /**
+     * Scope a query to only include orders for a specific user.
+     */
+    public function scopeForUser($query, int $userId)
+    {
+        return $query->where('user_id', $userId);
+    }
+
+    /**
+     * Scope a query to exclude cancelled orders.
+     */
+    public function scopeNotCancelled($query)
+    {
+        return $query->where('status', '!=', OrderStatus::Cancelled->value);
+    }
+
+    /**
+     * Scope a query to only include active orders (not cancelled or delivered).
+     */
+    public function scopeActive($query)
+    {
+        return $query->whereNotIn('status', [
+            OrderStatus::Cancelled->value,
+            OrderStatus::Delivered->value,
+        ]);
     }
 }

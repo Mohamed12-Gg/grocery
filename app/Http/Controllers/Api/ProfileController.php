@@ -8,31 +8,39 @@ use Illuminate\Http\Request;
 use App\Traits\V1\ApiResponse;
 use App\Http\Resources\Api\ProfileResource;
 use App\Http\Requests\Api\UpdateProfileRequest;
-use App\Http\Requests\Api\UpdateProfileImageRequest;
 use App\Http\Resources\Api\SessionResource;
 use App\Actions\Profile\UpdateInfoAction;
-use App\Actions\Profile\UpdateImageAction;
-use App\Actions\Profile\DeleteImageAction;
 use App\Actions\Profile\RevokeSessionAction;
 use App\Http\Resources\Api\UpdateProfileResource;
-use App\Actions\Profile\GetProfileAction;
 class ProfileController extends Controller
 {
     use ApiResponse;
-    public function show(Request $request, GetProfileAction $action): JsonResponse
+    public function show(Request $request): JsonResponse
     {
-        $data = $action->execute($request->user());
-        return $this->success('Profile retrieved successfully', new ProfileResource($data));
-    }
+       
+        $user = $request->user();
+        $user->load(['addresses', 'favorites.meal.category', 'favorites.meal.subcategory']);
+        $addresses = $user->addresses()->orderByDesc('is_default')->latest()->get();
+        $orders = $user
+            ->orders()
+            ->with(['items.meal.category', 'items.meal.subcategory', 'address'])
+            ->latest()
+            ->get();
+        $notifications = $user
+            ->notifications()
+            ->whereIn('data->type', ['order_confirmation', 'order_shipped', 'delivery_updates'])
+            ->latest()
+            ->take(20)
+            ->get();
+        $sessions = $user->tokens()->get();
 
-    /**
-     * Update profile image
-     */
-    public function updateImage(UpdateProfileImageRequest $request, UpdateImageAction $action): JsonResponse
-    {
-        $user = $action->execute($request->user(), $request->file('image'));
-
-        return $this->success('Profile image updated successfully', new UpdateProfileResource($user));
+        return $this->success('Profile retrieved successfully', new ProfileResource([
+            'user' => $user,
+            'addresses' => $addresses,
+            'orders' => $orders,
+            'notifications' => $notifications,
+            'sessions' => $sessions,
+        ]));
     }
 
     /**
@@ -43,24 +51,6 @@ class ProfileController extends Controller
         $user = $action->execute($request->user(), $request->validated());
 
         return $this->success('Profile information updated successfully', new UpdateProfileResource($user));
-    }
-
-    /**
-     * Delete profile image
-     */
-    public function deleteImage(Request $request, DeleteImageAction $action): JsonResponse
-    {
-        $user = $request->user();
-
-        $deleted = $action->execute($user);
-        if (!$deleted) {
-            return $this->error('No profile image to delete', 400);
-        }
-
-        return $this->success('Profile image deleted successfully', [
-            'profile_image' => null,
-            'profile_image_url' => null,
-        ]);
     }
 
     /**

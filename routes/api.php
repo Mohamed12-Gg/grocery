@@ -1,7 +1,5 @@
 <?php
 
-use  App\Jobs\SendInvoiceEmailJob;
-use  App\Jobs\SendToInventroyJob;
 use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\Auth\GoogleAuthController;
 use App\Http\Controllers\Api\AuthController;
@@ -37,12 +35,15 @@ use Illuminate\Support\Facades\Bus;
 use App\Http\Controllers\Api\SupportController;
 use App\Http\Controllers\Api\UserAppSettingsController;
 use App\Http\Controllers\Api\V1\CategoryController as ApiCategoryController;
-use App\Http\Controllers\Api\V1\InvoiceController;
+use App\Http\Controllers\Api\InvoiceController;
 use App\Http\Controllers\Api\V1\MealController as ApiMealController;
 use Illuminate\Support\Facades\Route;
-use App\Traits\V1;
 use App\http\Controllers\Api\ReviewController;
 use App\Jobs\SendInvoiceJob;
+use App\Http\Controllers\Api\RecieptController;
+use App\Http\Controllers\Api\MealReviewController;
+use App\Http\Controllers\Api\ProfileImageController;
+use App\Http\Controllers\Api\UserReviewsController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -81,7 +82,7 @@ Route::prefix("v1")->group(function(){
 
 
 Route::get('/send-email', function () {
-    SendInvoiceEmailJob::dispatch();
+    SendInvoiceJob::dispatch();
 
     return response()->json(['message' => 'Invoice email dispatched']);
 });
@@ -134,18 +135,21 @@ Route::middleware('auth:sanctum')->group(function () {
     // Profile routes
     Route::prefix('profile')->group(function () {
         Route::get('/', [ProfileController::class, 'show']);
-        Route::post('/image', [ProfileController::class, 'updateImage']);
+        Route::post('/image', [ProfileImageController::class, 'update']);
         Route::put('/info', [ProfileController::class, 'updateInfo']);
-        Route::delete('/image', [ProfileController::class, 'deleteImage']);
+        Route::delete('/image', [ProfileImageController::class, 'delete']);
         Route::get('/sessions', [ProfileController::class, 'sessions']);
         Route::delete('/sessions/{tokenId}', [ProfileController::class, 'destroySession']);
     });
+
     Route::prefix('reviews')->group(function () {
-        Route::get('/meal/{meal}', [ReviewController::class, 'getMealReviews']);
-        Route::get('/user/{userId}', [ReviewController::class, 'getUserReviews']);
-        Route::get('/meal/{meal}/stats', [ReviewController::class, 'getMealReviewStats']);
         Route::resource('/', ReviewController::class)->only(['store', 'show', 'update', 'destroy']);
     });
+    Route::get('/meals/{meal}/reviews', [MealReviewController::class, 'index']);
+    Route::get('/meals/{meal}/reviews/stats', [MealReviewController::class, 'stats']);
+
+    //
+    Route::get('/user/{user}/reviews', [UserReviewsController::class, 'index']);
 
     // Address routes
     Route::prefix('addresses')->group(function () {
@@ -233,9 +237,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('payments')->group(function () {
         Route::post('/stripe/checkout-session', [StripeCheckoutController::class, 'store']);
         Route::get('/stripe/verify-session/{session_id}', [StripeCheckoutController::class, 'verifySession']);
-        Route::get('/history', [PaymentController::class, 'paymentHistory']);
-        Route::get('/receipt/{order}', [PaymentController::class, 'receipt']);
+        Route::get('/', [PaymentController::class, 'index']);
+  
         Route::get('/invoice/{order}', [PaymentController::class, 'invoice']);
+    });
+    Route::prefix('receipts')->group(function () {
+        Route::get('/{order}', [RecieptController::class, 'index']);
+    });
+    Route::prefix('invoices')->group(function () {
+        Route::get('/{order}', [InvoiceController::class, 'index']);
     });
 
     // Dashboard route

@@ -18,7 +18,7 @@ class PaymentController extends Controller
     /**
      * Get payment history for the authenticated user.
      */
-    public function paymentHistory(Request $request): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         $orders = $request
             ->user()
@@ -34,14 +34,7 @@ class PaymentController extends Controller
     /**
      * Get receipt/invoice for a specific order.
      */
-    public function receipt(Order $order): JsonResponse
-    {
-        $this->authorize('view', $order);
-
-        $order->load(['items.meal.category', 'items.meal.subcategory', 'address', 'user']);
-
-        return $this->success('Receipt retrieved successfully', new ReceiptResource($order), 200);
-    }
+    
 
     /**
      * Get invoice for a specific order (alias for receipt).

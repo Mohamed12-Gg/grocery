@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\SettingRequest;
 use App\Http\Resources\SettingResource;
 use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
